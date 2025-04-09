@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}编辑资料 - PKUHUB{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center mb-6">
+        <a href="{{ url_for('profile.profile') }}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i>返回个人主页
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-6">编辑资料</h1>
+
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
+                    资料标题
+                </label>
+                {{ form.title(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                leading-tight focus:outline-none focus:shadow-outline") }}
+                {% if form.title.errors %}
+                {% for error in form.title.errors %}
+                <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="description">
+                    资料描述
+                </label>
+                {{ form.description(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                leading-tight focus:outline-none focus:shadow-outline", rows="4") }}
+                {% if form.description.errors %}
+                {% for error in form.description.errors %}
+                <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="department">
+                        所属学院
+                    </label>
+                    {{ form.department(class="shadow appearance-none border rounded w-full py-2 px-3
+                    text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="department") }}
+                    {% if form.department.errors %}
+                    {% for error in form.department.errors %}
+                    <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="course">
+                        课程名称
+                    </label>
+                    {{ form.course(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline", id="course") }}
+                    {% if form.course.errors %}
+                    {% for error in form.course.errors %}
+                    <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="material_type">
+                        资料类型
+                    </label>
+                    {{ form.material_type(class="shadow appearance-none border rounded w-full py-2 px-3
+                    text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.material_type.errors %}
+                    {% for error in form.material_type.errors %}
+                    <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="course_type">
+                        课程类型
+                    </label>
+                    {{ form.course_type(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline", id="course_type") }}
+                    {% if form.course_type.errors %}
+                    {% for error in form.course_type.errors %}
+                    <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="semester">
+                        学期
+                    </label>
+                    {{ form.semester(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.semester.errors %}
+                    {% for error in form.semester.errors %}
+                    <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="file">
+                    更新文件（可选）
+                </label>
+                {{ form.file(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                leading-tight focus:outline-none focus:shadow-outline") }}
+                {% if form.file.errors %}
+                {% for error in form.file.errors %}
+                <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                {% endfor %}
+                {% endif %}
+                <p class="text-sm text-gray-500 mt-1">当前文件: {{ material.original_filename }}</p>
+            </div>
+
+            <!-- 提交按钮和返回链接 -->
+            <div class="flex justify-between items-center mt-6">
+                {{ form.submit(class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded") }}
+                <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                    class="text-blue-500 hover:text-blue-800">取消编辑</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- 添加系别和课程联动脚本 -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const departmentSelect = document.getElementById('department');
+        const courseInput = document.getElementById('course');
+        const courseTypeSelect = document.getElementById('course_type');
+        const semesterSelect = document.getElementById('semester');
+        let allCoursesForDepartment = []; // 存储当前选择院系的所有课程
+        let allCourseTypes = []; // 存储所有课程类型
+
+        // 当选择系别变化时，更新课程下拉框
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', function () {
+                const departmentId = this.value;
+                if (departmentId) {
+                    fetch(`/api/courses/${departmentId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // 保存所有课程数据
+                            allCoursesForDepartment = data;
+
+                            // 使用 datalist 来提供课程建议
+                            let datalistId = 'course-list';
+                            let datalist = document.getElementById(datalistId);
+                            if (!datalist) {
+                                datalist = document.createElement('datalist');
+                                datalist.id = datalistId;
+                                document.body.appendChild(datalist);
+                                courseInput.setAttribute('list', datalistId);
+                            }
+
+                            // 清空并填充课程列表
+                            datalist.innerHTML = '';
+                            data.forEach(course => {
+                                const option = document.createElement('option');
+                                option.value = course.name;
+                                datalist.appendChild(option);
+                            });
+                        })
+                        .catch(error => console.error('获取课程列表出错:', error));
+                }
+            });
+
+            // 初始加载时执行一次，获取当前系别的课程
+            if (departmentSelect.value) {
+                departmentSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // 课程输入框的失去焦点事件：查找匹配的课程并自动填充类型
+        if (courseInput && courseTypeSelect) {
+            courseInput.addEventListener('change', function () {
+                const courseName = this.value.trim();
+                if (!courseName) return;
+
+                // 查找是否是已有课程
+                const existingCourse = allCoursesForDepartment.find(
+                    course => course.name.toLowerCase() === courseName.toLowerCase()
+                );
+
+                if (existingCourse) {
+                    // 查询课程详情并填充表单
+                    fetch(`/api/course_detail/${existingCourse.id}`)
+                        .then(response => response.json())
+                        .then(courseDetail => {
+                            // 自动填充课程类型
+                            if (courseDetail.type && courseTypeSelect) {
+                                // 设置课程类型选择框的值
+                                for (let i = 0; i < courseTypeSelect.options.length; i++) {
+                                    if (courseTypeSelect.options[i].value === courseDetail.type) {
+                                        courseTypeSelect.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        })
+                        .catch(error => console.error('获取课程详情出错:', error));
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

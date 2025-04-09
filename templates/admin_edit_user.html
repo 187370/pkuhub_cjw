@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}编辑用户 - PKUHUB{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center mb-6">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i>返回管理后台
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-6">编辑用户 - {{ user.username }}</h1>
+
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-6">
+                <label class="block text-gray-700 mb-2">当前头像</label>
+                <div class="flex justify-center mb-4">
+                    <img src="{{ url_for('static', filename='avatars/' + user.avatar) }}" alt="当前头像"
+                        class="w-24 h-24 rounded-full object-cover">
+                </div>
+            </div>
+
+            <!-- 用户名 -->
+            <div class="mb-6">
+                <label for="username" class="block text-gray-700 text-sm font-bold mb-2">用户名</label>
+                {{ form.username(class="border rounded w-full py-2 px-3", placeholder="输入用户名") }}
+                {% if form.username.errors %}
+                {% for error in form.username.errors %}
+                <div class="text-red-500 text-xs mt-1">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- 邮箱 -->
+            <div class="mb-6">
+                <label for="email" class="block text-gray-700 text-sm font-bold mb-2">邮箱</label>
+                {{ form.email(class="border rounded w-full py-2 px-3", placeholder="输入邮箱") }}
+                {% if form.email.errors %}
+                {% for error in form.email.errors %}
+                <div class="text-red-500 text-xs mt-1">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- 个人简介 -->
+            <div class="mb-6">
+                <label for="bio" class="block text-gray-700 text-sm font-bold mb-2">个人简介</label>
+                {{ form.bio(class="border rounded w-full py-2 px-3 h-24", placeholder="介绍一下这位用户...") }}
+                {% if form.bio.errors %}
+                {% for error in form.bio.errors %}
+                <div class="text-red-500 text-xs mt-1">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+
+
+            <!-- 提交按钮和返回链接 -->
+            <div class="flex justify-between items-center mt-6">
+                {{ form.submit(class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded") }}
+                <a href="{{ url_for('admin.admin_dashboard') }}" class="text-blue-500 hover:text-blue-800">返回管理后台</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

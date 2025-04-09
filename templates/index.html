@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}PKUHUB - 往年题与笔记共享{% endblock %}
+
+{% block head %}
+<style>
+    .search-container {
+        background-image: url('https://www.pku.edu.cn/__local/1/95/CB/335C323E29CB41E44322CFE6C28_C506D64A_17554.jpg');
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        margin-left: calc(-50vw + 50%);
+        margin-right: calc(-50vw + 50%);
+        margin-top: -3rem;
+        /* 原来是-2rem，现在增加负边距使区域向上延伸 */
+        padding-top: 5rem;
+        /* 增加顶部内边距确保内容不会被导航栏遮挡 */
+        padding-bottom: 3rem;
+        /* 增加底部内边距使区域更饱满 */
+    }
+
+    .search-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 搜索区域 -->
+<div class="search-container relative py-16">
+    <div class="container mx-auto px-4 text-center relative z-10">
+        <h1 class="text-3xl md:text-4xl font-bold text-white mb-6">PKUHUB</h1>
+        <p class="text-xl text-white mb-8">快速获取课程资料，助力学习进步</p>
+        <form action="{{ url_for('search.search') }}" method="get" class="max-w-3xl mx-auto flex">
+            <input name="q" type="text" placeholder="搜索课程、试卷或笔记..."
+                class="w-full px-6 py-4 rounded-l-lg focus:outline-none">
+            <button type="submit" class="pku-red hover-pku-red text-white px-6 py-4 rounded-r-lg">
+                <i class="fas fa-search mr-2"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- 学院分类 -->
+<div class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-bold mb-8 text-center">按学院浏览</h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for department in departments %}
+        <a href="{{ url_for('browse.department_view', department_id=department.id) }}"
+            class="category-card bg-white rounded-lg shadow p-6 text-center transition duration-300 cursor-pointer">
+            <div
+                class="w-16 h-16 mx-auto bg-{{ ['red', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo'][loop.index0 % 7] }}-100 rounded-full flex items-center justify-center mb-4">
+                <i
+                    class="fas fa-{{ ['calculator', 'laptop-code', 'flask', 'landmark', 'brain', 'language', 'atom'][loop.index0 % 7] }} text-2xl text-{{ ['red', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo'][loop.index0 % 7] }}-600"></i>
+            </div>
+            <h3 class="font-semibold">{{ department.name }}</h3>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 最近更新 -->
+<div class="bg-white py-12 my-8 -mx-4">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-bold">最近更新</h2>
+            <a href="{{ url_for('search.search', sort='newest') }}" class="text-blue-600 hover:underline">查看更多</a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for material in recent_materials %}
+            <!-- 资料卡片 -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                <div class="p-4">
+                    <h3 class="font-bold text-lg mb-2 truncate">
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                            class="hover:text-blue-600">
+                            {{ material.title }}
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('auth.login', next=url_for('material.material_view', material_id=material.id)) }}"
+                            class="hover:text-blue-600">
+                            {{ material.title }}
+                        </a>
+                        {% endif %}
+                    </h3>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="inline-block px-2 py-1 text-xs rounded 
+            {% if material.file_type == '试卷' %}bg-blue-100 text-blue-800
+            {% elif material.file_type == '笔记' %}bg-green-100 text-green-800
+            {% elif material.file_type == '课件' %}bg-purple-100 text-purple-800
+            {% else %}bg-red-100 text-red-800{% endif %} mb-2">
+                                {{ material.file_type }}
+                            </span>
+                            <h3 class="font-semibold text-lg mb-1">{{ material.title }}</h3>
+                            <p class="text-gray-600 text-sm">{{ material.course.department.name }} | {{
+                                material.semester }}</p>
+                        </div>
+                        <span class="text-xs text-gray-500">{{ material.created_at|time_since }}</span>
+                    </div>
+                    <div class="flex items-center mt-4 text-sm text-gray-500">
+                        <div class="flex items-center mr-4">
+                            <i class="far fa-eye mr-1"></i>
+                            <span>{{ material.stats.download_count }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="far fa-comment mr-1"></i>
+                            <span>{{ material.comments.count() }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t px-5 py-3 bg-gray-50 flex justify-between items-center">
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='avatars/' + material.uploader.avatar) }}"
+                            alt="{{ material.uploader.username }}"
+                            class="w-6 h-6 rounded-full mr-2 object-cover border border-gray-200">
+                        <span class="text-sm text-gray-600">{{ material.uploader.username }}</span>
+                    </div>
+                    <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                        class="text-sm text-blue-600 hover:underline">查看</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 热门资料 -->
+<div class="container mx-auto px-4 py-12">
+    <div class="flex justify-between items-center mb-8">
+        <h2 class="text-2xl font-bold">热门资料</h2>
+        <a href="{{ url_for('search.search', sort='downloads') }}" class="text-blue-600 hover:underline">查看更多</a>
+    </div>
+
+    <div class="overflow-hidden shadow border rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">资料名称
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">所属课程
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上传时间
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">下载量
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for material in popular_materials %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <i class="far 
+                            {% if material.file_extension == '.pdf' %}fa-file-pdf text-red-500
+                            {% elif material.file_extension in ['.doc', '.docx'] %}fa-file-word text-blue-500
+                            {% elif material.file_extension in ['.ppt', '.pptx'] %}fa-file-powerpoint text-orange-500
+                            {% elif material.file_extension in ['.xls', '.xlsx'] %}fa-file-excel text-green-500
+                            {% else %}fa-file text-gray-500{% endif %} mr-3"></i>
+                            <div>
+                                <div class="flex items-center">
+                                    <span class="text-sm font-medium text-gray-900">{{ material.title }}</span>
+                                    <img src="{{ url_for('static', filename='avatars/' + material.uploader.avatar) }}"
+                                        alt="{{ material.uploader.username }}"
+                                        class="w-5 h-5 rounded-full ml-2 object-cover border border-gray-200"
+                                        title="{{ material.uploader.username }}">
+                                </div>
+                                <div class="text-sm text-gray-500">{{ material.semester }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ material.course.name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if material.file_type == '试卷' %}bg-blue-100 text-blue-800
+                            {% elif material.file_type == '笔记' %}bg-green-100 text-green-800
+                            {% elif material.file_type == '课件' %}bg-purple-100 text-purple-800
+                            {% elif material.file_type == '汇编' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ material.file_type }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ material.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ material.stats.download_count }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                            class="text-blue-600 hover:text-blue-900 mr-3">预览</a>
+                        <a href="{{ url_for('material.download', material_id=material.id) }}"
+                            class="text-green-600 hover:text-green-900">下载</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 上传资料区 -->
+<div class="bg-gray-100 py-12 my-8 -mx-4">
+    <div class="container mx-auto px-4 text-center">
+        <h2 class="text-2xl font-bold mb-4">贡献你的资料</h2>
+        <p class="text-gray-600 mb-8 max-w-2xl mx-auto">分享你的笔记、试卷或课程资料，帮助其他同学更好地学习。每一份贡献都将获得积分奖励！</p>
+        <a href="{{ url_for('material.upload') }}"
+            class="pku-red hover-pku-red text-white font-medium px-6 py-3 rounded-lg inline-flex items-center">
+            <i class="fas fa-upload mr-2"></i>
+            上传资料
+        </a>
+    </div>
+</div>
+
+<!-- 使用统计 -->
+<div class="container mx-auto px-4 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+            <div class="text-4xl font-bold text-blue-600 mb-2">{{ material_count }}+</div>
+            <div class="text-gray-600">共享资料</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+            <div class="text-4xl font-bold text-green-600 mb-2">{{ user_count }}+</div>
+            <div class="text-gray-600">注册用户</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+            <div class="text-4xl font-bold text-purple-600 mb-2">{{ download_count }}+</div>
+            <div class="text-gray-600">资料下载次数</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

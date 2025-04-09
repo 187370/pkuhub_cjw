@@ -1,0 +1,19 @@
+admin:
+  emails:
+  - qinhongwei@stu.pku.edu.cn
+  - 2300013554@stu.pku.edu.cn
+csrf:
+  ssl_strict: false
+  time_limit: 3600
+database:
+  track_modifications: false
+  uri: sqlite:///pkuhub.db
+session:
+  cookie:
+    httponly: true
+    samesite: Lax
+    secure: false
+upload:
+  avatar_folder: static/avatars
+  folder: static/uploads
+  max_content_length: 52428800

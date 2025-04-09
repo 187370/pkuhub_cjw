@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}找不到页面 - PKUHUB{% endblock %}
+
+{% block content %}
+<!-- 未找到内容 -->
+<div class="max-w-3xl mx-auto text-center">
+    <div class="text-9xl font-bold text-gray-200 mb-6">404</div>
+    <h1 class="text-3xl font-bold mb-6">哎呀，未找到相关资料！</h1>
+
+    {% if search_type == 'search' %}
+    <p class="text-lg text-gray-600 mb-8">
+        抱歉，没有找到与 <span class="font-semibold">{{ query }}</span> 相关的资料。
+        {% if filter_info %}
+        当前筛选条件:
+    <ul class="list-disc list-inside my-4 text-left max-w-md mx-auto">
+        {% for filter_name, filter_value in filter_info %}
+        <li><span class="font-medium">{{ filter_name }}:</span> {{ filter_value }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    </p>
+
+    <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
+        <a href="{{ url_for('search.search', q=query) }}"
+            class="text-blue-600 hover:text-blue-800 border border-blue-600 px-6 py-3 rounded-lg">
+            <i class="fas fa-filter-circle-xmark mr-2"></i>重置筛选条件
+        </a>
+        <a href="{{ url_for('search.search') }}"
+            class="text-gray-600 hover:text-gray-800 border border-gray-600 px-6 py-3 rounded-lg">
+            <i class="fas fa-search mr-2"></i>返回搜索
+        </a>
+    </div>
+    {% else %}
+    <p class="text-lg text-gray-600 mb-8">
+        您请求的页面不存在或者内容已被移除。
+    </p>
+    {% endif %}
+
+    <div class="mt-10">
+        <h2 class="text-xl font-semibold mb-4">您可以尝试以下方法：</h2>
+        <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4 mt-6">
+            <a href="{{ url_for('browse.index') }}"
+                class="pku-red hover-pku-red text-white py-3 px-6 rounded-lg inline-flex items-center">
+                <i class="fas fa-home mr-2"></i>返回首页
+            </a>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('material.upload') }}"
+                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+                <i class="fas fa-upload mr-2"></i>上传资料
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}"
+                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+                <i class="fas fa-sign-in-alt mr-2"></i>登录上传
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - PKUHUB{% endblock %}
+
+{% block content %}
+<!-- 注册区域 -->
+<div class="container mx-auto px-4 py-12">
+    <div class="max-w-md mx-auto bg-white rounded-lg overflow-hidden shadow-lg">
+        <div class="py-4 px-6 pku-red">
+            <h2 class="text-xl text-white font-bold text-center">用户注册</h2>
+        </div>
+        <div class="p-6">
+            <form method="POST" action="{{ url_for('auth.register') }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                        {{ form.username.label }}
+                    </label>
+                    {{ form.username(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline", placeholder="输入您的用户名") }}
+                    {% if form.username.errors %}
+                    <div class="text-red-500 text-xs italic mt-1">
+                        {% for error in form.username.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                        {{ form.email.label }}
+                    </label>
+                    {{ form.email(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline", placeholder="example@stu.pku.edu.cn",
+                    id="email") }}
+                    <p class="text-xs text-gray-500 mt-1">必须使用北京大学学生邮箱（@stu.pku.edu.cn或@pku.edu.cn）注册</p>
+                    {% if form.email.errors %}
+                    <div class="text-red-500 text-xs italic mt-1">
+                        {% for error in form.email.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                        {{ form.password.label }}
+                    </label>
+                    {{ form.password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline", placeholder="设置密码") }}
+                    {% if form.password.errors %}
+                    <div class="text-red-500 text-xs italic mt-1">
+                        {% for error in form.password.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="confirm_password">
+                        {{ form.confirm_password.label }}
+                    </label>
+                    {{ form.confirm_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline", placeholder="再次输入密码") }}
+                    {% if form.confirm_password.errors %}
+                    <div class="text-red-500 text-xs italic mt-1">
+                        {% for error in form.confirm_password.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- 验证码字段 -->
+                <div class="mb-4 flex">
+                    <div class="w-2/3 mr-2">
+                        {{ form.verification_code(class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2
+                        focus:ring-blue-500", placeholder="输入验证码") }}
+                        {% for error in form.verification_code.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <button type="button" id="send-code-btn"
+                        class="w-1/3 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">
+                        获取验证码
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    {{ form.submit(class="pku-red hover-pku-red text-white font-bold py-2 px-4 rounded
+                    focus:outline-none focus:shadow-outline") }}
+                    <a href="{{ url_for('auth.login') }}"
+                        class="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800">
+                        已有账号？登录
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- 添加JavaScript处理验证码发送 -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const emailInput = document.getElementById('email');
+        const usernameInput = document.getElementById('username');
+        const sendCodeBtn = document.getElementById('send-code-btn');
+
+        // 为输入字段添加反馈元素
+        const emailFeedback = document.createElement('div');
+        emailFeedback.className = 'text-xs mt-1';
+        emailInput.parentNode.appendChild(emailFeedback);
+
+        const usernameFeedback = document.createElement('div');
+        usernameFeedback.className = 'text-xs mt-1';
+        usernameInput.parentNode.appendChild(usernameFeedback);
+
+        // 邮箱验证状态
+        let isEmailValid = false;
+        let isUsernameValid = false;
+
+        // 邮箱失去焦点时检查
+        emailInput.addEventListener('blur', function () {
+            checkEmail();
+        });
+
+        // 用户名失去焦点时检查
+        usernameInput.addEventListener('blur', function () {
+            checkUsername();
+        });
+
+        // 发送验证码按钮点击事件
+        sendCodeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            // 先检查邮箱和用户名
+            Promise.all([checkEmail(), checkUsername()])
+                .then(results => {
+                    const [emailValid, usernameValid] = results;
+
+                    if (emailValid && usernameValid) {
+                        // 两项都验证通过，发送验证码
+                        sendVerificationCode();
+                    } else {
+                        // 提示用户修正表单
+                        alert('请先确保邮箱和用户名填写正确且可用');
+                    }
+                })
+                .catch(error => {
+                    console.error('验证错误:', error);
+                    alert('验证过程中出现错误，请稍后重试');
+                });
+        });
+
+        // 检查邮箱函数
+        function checkEmail() {
+            return new Promise((resolve) => {
+                const email = emailInput.value.trim();
+
+                // 重置验证状态
+                isEmailValid = false;
+
+                if (!email) {
+                    emailFeedback.textContent = '请输入邮箱';
+                    emailFeedback.className = 'text-red-500 text-xs mt-1';
+                    resolve(false);
+                    return;
+                }
+
+                // 检查邮箱格式
+                if (!email.endsWith('@stu.pku.edu.cn') && !email.endsWith('@pku.edu.cn')) {
+                    emailFeedback.textContent = '请使用北京大学邮箱';
+                    emailFeedback.className = 'text-red-500 text-xs mt-1';
+                    resolve(false);
+                    return;
+                }
+
+                // 获取CSRF令牌
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+                // 发送请求检查邮箱是否已注册
+                fetch('/check_email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.available) {
+                            emailFeedback.textContent = '此邮箱可以使用';
+                            emailFeedback.className = 'text-green-500 text-xs mt-1';
+                            isEmailValid = true;
+                            resolve(true);
+                        } else {
+                            emailFeedback.textContent = data.message || '该邮箱已被注册';
+                            emailFeedback.className = 'text-red-500 text-xs mt-1';
+                            resolve(false);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        emailFeedback.textContent = '验证邮箱时出错';
+                        emailFeedback.className = 'text-red-500 text-xs mt-1';
+                        resolve(false);
+                    });
+            });
+        }
+
+        // 检查用户名函数
+        function checkUsername() {
+            return new Promise((resolve) => {
+                const username = usernameInput.value.trim();
+
+                // 重置验证状态
+                isUsernameValid = false;
+
+                if (!username) {
+                    usernameFeedback.textContent = '请输入用户名';
+                    usernameFeedback.className = 'text-red-500 text-xs mt-1';
+                    resolve(false);
+                    return;
+                }
+
+                // 获取CSRF令牌
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+                // 发送请求检查用户名是否已使用
+                fetch('/check_username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ username: username })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.available) {
+                            usernameFeedback.textContent = '此用户名可以使用';
+                            usernameFeedback.className = 'text-green-500 text-xs mt-1';
+                            isUsernameValid = true;
+                            resolve(true);
+                        } else {
+                            usernameFeedback.textContent = data.message || '该用户名已被使用';
+                            usernameFeedback.className = 'text-red-500 text-xs mt-1';
+                            resolve(false);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        usernameFeedback.textContent = '验证用户名时出错';
+                        usernameFeedback.className = 'text-red-500 text-xs mt-1';
+                        resolve(false);
+                    });
+            });
+        }
+
+        // 发送验证码函数
+        function sendVerificationCode() {
+            const email = emailInput.value.trim();
+            const username = usernameInput.value.trim();
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+            // 禁用按钮并开始倒计时
+            startCountdown();
+
+            fetch('{{ url_for("auth.send_verification_code") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    email: email,
+                    username: username // 同时发送用户名，让后端也能验证
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('验证码已发送到您的邮箱，请查收');
+                    } else {
+                        alert(data.message || '发送验证码失败，请稍后重试');
+                        stopCountdown(); // 如果失败，停止倒计时
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('发送验证码失败，请稍后重试');
+                    stopCountdown(); // 如果失败，停止倒计时
+                });
+        }
+
+        let countdown = 0;
+        let timer = null;
+
+        function startCountdown() {
+            countdown = 60;
+            sendCodeBtn.disabled = true;
+            sendCodeBtn.classList.add('bg-gray-400');
+            sendCodeBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+
+            updateButtonText();
+
+            timer = setInterval(function () {
+                countdown--;
+                updateButtonText();
+
+                if (countdown <= 0) {
+                    stopCountdown();
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            clearInterval(timer);
+            sendCodeBtn.disabled = false;
+            sendCodeBtn.classList.remove('bg-gray-400');
+            sendCodeBtn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+            sendCodeBtn.textContent = '获取验证码';
+        }
+
+        function updateButtonText() {
+            sendCodeBtn.textContent = `重新发送(${countdown}s)`;
+        }
+    });
+</script>
+{% endblock %}

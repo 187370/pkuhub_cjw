@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}{{ department.name }} - 学院资料 - PKUHUB{% endblock %}
+
+{% block content %}
+<!-- 面包屑导航 -->
+<div class="text-sm mb-6">
+    <a href="{{ url_for('browse.index') }}" class="text-blue-600 hover:underline">首页</a> &gt;
+    <span class="text-gray-600">{{ department.name }}</span>
+</div>
+
+<!-- 学院信息 -->
+<div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+    <div class="p-6">
+        <h1 class="text-2xl font-bold mb-2">{{ department.name }}</h1>
+        <p class="text-gray-600 mb-4">北京大学{{ department.name }}课程资料库</p>
+        <div class="flex items-center space-x-4">
+            <div class="bg-blue-50 px-4 py-2 rounded-lg">
+                <p class="text-blue-800 font-medium text-sm">课程数: {{ courses|length }}</p>
+            </div>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('material.upload') }}"
+                class="bg-green-50 px-4 py-2 rounded-lg text-green-800 font-medium text-sm flex items-center">
+                <i class="fas fa-upload mr-2"></i>上传资料
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login', next=request.path) }}"
+                class="bg-green-50 px-4 py-2 rounded-lg text-green-800 font-medium text-sm flex items-center">
+                <i class="fas fa-sign-in-alt mr-2"></i>登录后上传
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 课程搜索框 -->
+<div class="bg-white rounded-lg shadow mb-8 p-4">
+    <form action="{{ url_for('browse.department_view', department_id=department.id) }}" method="get"
+        class="flex items-center">
+        <input type="text" name="query" placeholder="搜索课程名称..." value="{{ query }}"
+            class="flex-grow px-4 py-2 rounded-l-lg border-t border-b border-l focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-r-lg">
+            <i class="fas fa-search"></i>
+        </button>
+    </form>
+</div>
+
+<!-- 课程列表 -->
+<h2 class="text-xl font-bold mb-6">课程列表
+    {% if query %}
+    <span class="text-base font-normal text-gray-600">- 搜索结果: "{{ query }}"</span>
+    {% if courses|length == 0 %}<span class="text-red-500">(无匹配结果)</span>{% endif %}
+    {% endif %}
+</h2>
+{% if courses %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for course in courses %}
+    <a href="{{ url_for('browse.course_view', course_id=course.id) }}"
+        class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition duration-300">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="font-semibold text-lg mb-2">{{ course.name }}</h3>
+                <p class="text-gray-600 text-sm">{{ course.materials.count() }} 份资料</p>
+            </div>
+            <div class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                {% if course.materials.count() > 0 %}
+                {% set types = {'试卷': 0, '笔记': 0, '课件': 0} %}
+                {% for material in course.materials %}
+                {% if material.file_type in types %}
+                {% set _ = types.update({material.file_type: types[material.file_type] + 1}) %}
+                {% endif %}
+                {% endfor %}
+
+                {% if types['试卷'] >= types['笔记'] and types['试卷'] >= types['课件'] %}
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">试卷主导</span>
+                {% elif types['笔记'] >= types['试卷'] and types['笔记'] >= types['课件'] %}
+                <span class="bg-green-100 text-green-800 px-2 py-1 rounded">笔记主导</span>
+                {% elif types['课件'] >= types['试卷'] and types['课件'] >= types['笔记'] %}
+                <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">课件主导</span>
+                {% else %}
+                <span class="bg-gray-100 text-gray-800 px-2 py-1 rounded">混合资料</span>
+                {% endif %}
+                {% else %}
+                <span class="bg-gray-100 text-gray-800">暂无资料</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-4 text-sm">
+            {% if course.materials.count() > 0 %}
+            <div class="flex justify-between items-center">
+                <span class="text-gray-500">最近更新:</span>
+                <span class="text-gray-700">
+                    {% set latest = course.materials|sort(attribute='created_at', reverse=True)|first %}
+                    {{ latest.created_at.strftime('%Y-%m-%d') }}
+                </span>
+            </div>
+            <div class="flex justify-between items-center mt-1">
+                <span class="text-gray-500">下载次数:</span>
+                <span class="text-gray-700">
+                    {% set total_downloads = 0 %}
+                    {% for material in course.materials %}
+                    {% set total_downloads = total_downloads + material.stats.download_count %}
+                    {% endfor %}
+                    {{ total_downloads }}
+                </span>
+            </div>
+            {% else %}
+            <div class="text-center text-gray-500 py-2">
+                暂无资料，点击添加
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <span class="text-blue-600 text-sm">查看课程 <i class="fas fa-chevron-right ml-1"></i></span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-12 bg-white rounded-lg shadow">
+    <i class="fas fa-university text-gray-300 text-5xl mb-4"></i>
+    <p class="text-lg text-gray-500 mb-6">该学院暂无课程资料</p>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('material.upload') }}"
+        class="pku-red hover-pku-red text-white px-6 py-3 rounded-lg inline-flex items-center">
+        <i class="fas fa-upload mr-2"></i>上传第一份资料
+    </a>
+    {% else %}
+    <a href="{{ url_for('auth.login') }}" class="text-blue-600 hover:underline">登录</a>
+    <span class="text-gray-500">后上传资料</span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

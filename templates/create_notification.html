@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}发布通知 - PKUHUB{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-6 pku-red-text">发布新通知</h1>
+
+        <form method="POST" action="{{ url_for('notification.create_notification') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- 通知标题 -->
+            <div class="mb-4">
+                <label for="title" class="block text-gray-700 text-sm font-bold mb-2">标题</label>
+                <input type="text" id="title" name="title" required
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+
+            <!-- 目标角色 -->
+            <div class="mb-4">
+                <label for="target_role" class="block text-gray-700 text-sm font-bold mb-2">发送对象</label>
+                <select id="target_role" name="target_role"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">所有用户</option>
+                    <option value="admin">仅管理员</option>
+                </select>
+            </div>
+
+            <!-- 通知内容 -->
+            <div class="mb-6">
+                <label for="content" class="block text-gray-700 text-sm font-bold mb-2">内容</label>
+                <textarea id="content" name="content" rows="6" required
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="flex items-center justify-between">
+                <button type="submit"
+                    class="pku-red hover-pku-red text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    发布通知
+                </button>
+                <a href="{{ url_for('notification.view_notifications') }}" class="text-blue-500 hover:text-blue-700">
+                    返回通知列表
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

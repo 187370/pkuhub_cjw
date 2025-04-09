@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}用户排行榜 - PKUHUB{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6 pku-red-text">用户排行榜</h1>
+
+    <!-- 排序选项 -->
+    <div class="mb-6">
+        <div class="flex flex-wrap space-x-2">
+            <a href="{{ url_for('ranking.show_ranking', sort_by='downloads') }}"
+                class="px-4 py-2 mb-2 rounded {{ 'pku-red text-white' if sort_by == 'downloads' else 'bg-gray-200 text-gray-700' }}">
+                下载量排行
+            </a>
+            <a href="{{ url_for('ranking.show_ranking', sort_by='uploads') }}"
+                class="px-4 py-2 mb-2 rounded {{ 'pku-red text-white' if sort_by == 'uploads' else 'bg-gray-200 text-gray-700' }}">
+                上传量排行
+            </a>
+            <a href="{{ url_for('ranking.show_ranking', sort_by='followers') }}"
+                class="px-4 py-2 mb-2 rounded {{ 'pku-red text-white' if sort_by == 'followers' else 'bg-gray-200 text-gray-700' }}">
+                粉丝数排行
+            </a>
+            <a href="{{ url_for('ranking.show_ranking', sort_by='likes') }}"
+                class="px-4 py-2 mb-2 rounded {{ 'pku-red text-white' if sort_by == 'likes' else 'bg-gray-200 text-gray-700' }}">
+                收藏量排行
+            </a>
+        </div>
+    </div>
+
+    <!-- 排行榜表格 -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排名</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {% if sort_by == 'downloads' %}总下载量
+                        {% elif sort_by == 'uploads' %}上传数量
+                        {% elif sort_by == 'followers' %}粉丝数量
+                        {% elif sort_by == 'likes' %}收藏数量
+                        {% endif %}
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">注册时间</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user, count in users %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium">
+                            {% if loop.index == 1 %}
+                            <span
+                                class="inline-flex items-center justify-center w-6 h-6 text-sm bg-yellow-400 text-white rounded-full">1</span>
+                            {% elif loop.index == 2 %}
+                            <span
+                                class="inline-flex items-center justify-center w-6 h-6 text-sm bg-gray-300 text-white rounded-full">2</span>
+                            {% elif loop.index == 3 %}
+                            <span
+                                class="inline-flex items-center justify-center w-6 h-6 text-sm bg-yellow-700 text-white rounded-full">3</span>
+                            {% else %}
+                            <span class="text-gray-900">{{ loop.index }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <a href="{{ url_for('profile.view_user', user_id=user.id) }}">
+                                    <img class="h-10 w-10 rounded-full object-cover"
+                                        src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+                                        alt="{{ user.username }}">
+                                </a>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">
+                                    <a href="{{ url_for('profile.view_user', user_id=user.id) }}"
+                                        class="hover:underline">
+                                        {{ user.username }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ count or 0 }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ user.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 添加底部提示 -->
+    <div class="mt-4 text-center text-gray-500 text-sm">
+        <p>* 仅显示前十名用户</p>
+    </div>
+</div>
+{% endblock %}

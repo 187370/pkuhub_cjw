@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}管理后台 - PKUHUB{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold pku-red-text">管理员后台</h1>
+    <a href="{{ url_for('profile.profile') }}" class="text-blue-600 hover:text-blue-800">
+        <i class="fas fa-arrow-left mr-2"></i>返回个人主页
+    </a>
+</div>
+
+<!-- 统计信息 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-700">用户总数</h2>
+            <span class="text-2xl font-bold pku-red-text">{{ user_count }}</span>
+        </div>
+        <p class="text-sm text-gray-500 mt-2">平台注册用户数量</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-700">资料总数</h2>
+            <span class="text-2xl font-bold text-green-600">{{ material_count }}</span>
+        </div>
+        <p class="text-sm text-gray-500 mt-2">平台上传资料数量</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-700">下载总数</h2>
+            <span class="text-2xl font-bold text-blue-600">{{ download_count }}</span>
+        </div>
+        <p class="text-sm text-gray-500 mt-2">资料被下载次数</p>
+    </div>
+</div>
+
+<!-- 用户列表 -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-4">用户列表</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ID</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        用户名</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        邮箱</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        注册日期</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        上传数</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        身份</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        操作</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user in users %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <img class="h-10 w-10 rounded-full object-cover"
+                                    src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+                                    alt="{{ user.username }}">
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.email }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.materials.count() }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if user.is_admin %}
+                        <span
+                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            管理员
+                        </span>
+                        {% else %}
+                        <span
+                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            普通用户
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}"
+                            class="text-indigo-600 hover:text-indigo-900">编辑</a>
+                        {% if not user.is_admin and current_user.id != user.id %}
+                        <button onclick="confirmDeleteUser({{ user.id }}, '{{ user.username }}')"
+                            class="text-red-600 hover:text-red-900">注销</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 最近上传资料 -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-4">资料管理</h2>
+
+    <!-- 添加搜索和排序功能 -->
+    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+        <form action="{{ url_for('admin.admin_dashboard') }}" method="get" class="flex flex-wrap items-center">
+            <div class="flex-grow mr-4 mb-2 md:mb-0">
+                <input type="text" name="material_query" placeholder="搜索资料..." value="{{ material_query }}"
+                    class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mr-4">
+                <select name="material_sort" class="border rounded-lg px-4 py-2" onchange="this.form.submit()">
+                    <option value="最新上传" {% if material_sort=='最新上传' %}selected{% endif %}>最新上传</option>
+                    <option value="最多下载" {% if material_sort=='最多下载' %}selected{% endif %}>最多下载</option>
+                    <option value="按标题" {% if material_sort=='按标题' %}selected{% endif %}>按标题</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">搜索</button>
+            {% if material_query or material_sort != '最新上传' %}
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="ml-2 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i> 清除筛选
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="overflow-x-auto">
+        {% if recent_materials %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        资料名称</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        所属课程</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        上传者</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        上传时间</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        下载量</th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        操作</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for material in recent_materials %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            {% if material.file_extension == '.pdf' %}
+                            <i class="far fa-file-pdf text-red-500 mr-3"></i>
+                            {% elif material.file_extension in ['.doc', '.docx'] %}
+                            <i class="far fa-file-word text-blue-500 mr-3"></i>
+                            {% elif material.file_extension in ['.ppt', '.pptx'] %}
+                            <i class="far fa-file-powerpoint text-orange-500 mr-3"></i>
+                            {% else %}
+                            <i class="far fa-file text-gray-500 mr-3"></i>
+                            {% endif %}
+                            <div class="text-sm font-medium text-gray-900">{{ material.title }}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ material.course.name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <img src="{{ url_for('static', filename='avatars/' + material.uploader.avatar) }}"
+                                alt="{{ material.uploader.username }}" class="w-6 h-6 rounded-full mr-2 object-cover">
+                            {{ material.uploader.username }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ material.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ material.stats.download_count if material.stats else 0 }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                        <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                            class="text-blue-600 hover:text-blue-900">查看</a>
+                        <a href="{{ url_for('material.edit_material', material_id=material.id) }}"
+                            class="text-indigo-600 hover:text-indigo-900">编辑</a>
+                        <button onclick="confirmDeleteMaterial({{ material.id }}, '{{ material.title }}')"
+                            class="text-red-600 hover:text-red-900">删除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-8">
+            {% if material_query %}
+            <div class="text-gray-400 mb-4"><i class="fas fa-search text-6xl"></i></div>
+            <h3 class="text-xl font-semibold mb-2">未找到匹配的资料</h3>
+            <p class="text-gray-500 mb-4">没有找到符合"{{ material_query }}"的资料</p>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="text-blue-600 hover:underline">清除搜索</a>
+            {% else %}
+            <div class="text-gray-400 mb-4"><i class="fas fa-folder-open text-6xl"></i></div>
+            <h3 class="text-xl font-semibold mb-2">暂无资料</h3>
+            <p class="text-gray-500">系统中还没有任何资料</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 确认删除用户模态框 -->
+<div id="deleteUserModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-96">
+        <h3 class="text-lg font-semibold mb-4">确认注销用户</h3>
+        <p class="text-gray-600 mb-6">您确定要注销用户 <span id="deleteUsername" class="font-semibold"></span>
+            吗？此操作不可撤销，将删除该用户的所有数据。</p>
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeDeleteUserModal()"
+                class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">取消</button>
+            <button id="confirmDeleteUserBtn"
+                class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">确认注销</button>
+        </div>
+    </div>
+</div>
+
+<!-- 确认删除资料模态框 -->
+<div id="deleteMaterialModal"
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-96">
+        <h3 class="text-lg font-semibold mb-4">确认删除资料</h3>
+        <p class="text-gray-600 mb-6">您确定要删除资料 <span id="deleteMaterialTitle" class="font-semibold"></span> 吗？此操作不可撤销。
+        </p>
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeDeleteMaterialModal()"
+                class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">取消</button>
+            <button id="confirmDeleteMaterialBtn"
+                class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">确认删除</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 用户相关变量
+    let userIdToDelete = null;
+    const csrfToken = "{{ csrf_token() }}";
+
+    // 资料相关变量
+    let materialIdToDelete = null;
+
+    // 删除用户模态框
+    function confirmDeleteUser(userId, username) {
+        userIdToDelete = userId;
+        document.getElementById('deleteUsername').textContent = username;
+        document.getElementById('deleteUserModal').classList.remove('hidden');
+    }
+
+    function closeDeleteUserModal() {
+        document.getElementById('deleteUserModal').classList.add('hidden');
+        userIdToDelete = null;
+    }
+
+    document.getElementById('confirmDeleteUserBtn').addEventListener('click', function () {
+        if (userIdToDelete) {
+            fetch(`/admin/user/${userIdToDelete}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert(data.message || '注销用户失败，请稍后再试');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('请求失败，请稍后再试');
+                })
+                .finally(() => {
+                    closeDeleteUserModal();
+                });
+        }
+    });
+
+    // 删除资料模态框
+    function confirmDeleteMaterial(materialId, title) {
+        materialIdToDelete = materialId;
+        document.getElementById('deleteMaterialTitle').textContent = title;
+        document.getElementById('deleteMaterialModal').classList.remove('hidden');
+    }
+
+    function closeDeleteMaterialModal() {
+        document.getElementById('deleteMaterialModal').classList.add('hidden');
+        materialIdToDelete = null;
+    }
+
+    document.getElementById('confirmDeleteMaterialBtn').addEventListener('click', function () {
+        if (materialIdToDelete) {
+            fetch(`/material/${materialIdToDelete}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert(data.message || '删除资料失败，请稍后再试');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('请求失败，请稍后再试');
+                })
+                .finally(() => {
+                    closeDeleteMaterialModal();
+                });
+        }
+    });
+</script>
+{% endblock %}

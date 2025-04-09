@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}个人主页 - {{ user.username }} - PKUHUB{% endblock %}
+
+{% block head %}
+<style>
+    .pku-red-border {
+        border-color: #900023;
+    }
+
+    .tab-active {
+        border-bottom: 2px solid #900023;
+        color: #900023;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 个人资料卡 -->
+<div class="max-w-5xl mx-auto bg-white rounded-lg shadow-md overflow-hidden mb-8">
+    <div class="md:flex">
+        <div class="md:w-1/3 bg-gray-50 p-8 flex flex-col items-center justify-center">
+            <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-md">
+                <img src="{{ url_for('static', filename='avatars/' + user.avatar) }}" alt="{{ user.username }}的头像"
+                    class="w-full h-full object-cover">
+            </div>
+            <h1 class="text-2xl font-bold mt-4">{{ user.username }}</h1>
+
+            <!-- 关注按钮 - 仅对登录用户且非本人显示 -->
+            {% if current_user.is_authenticated and current_user.id != user.id %}
+            <button id="followUserBtn" onclick="toggleFollowUser({{ user.id }}, '{{ user.username }}')"
+                class="mt-4 px-4 py-2 rounded text-sm {% if is_following %}bg-gray-500 hover:bg-gray-600{% else %}pku-red hover-pku-red{% endif %} text-white">
+                {% if is_following %}
+                <i class="fas fa-user-minus mr-1"></i>取消关注
+                {% else %}
+                <i class="fas fa-user-plus mr-1"></i>关注用户
+                {% endif %}
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="md:w-2/3 p-8">
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">个人简介</h3>
+                {% if user.bio %}
+                <p>{{ user.bio|nl2br }}</p>
+                {% else %}
+                <p class="text-gray-400 italic">这个人很懒，什么都没有留下...</p>
+                {% endif %}
+            </div>
+
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-chart-bar mr-2 pku-red-text"></i>活动统计
+            </h3>
+            <div class="grid grid-cols-5 gap-4 text-center">
+                <div class="bg-blue-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-blue-600">{{ uploads|length }}</div>
+                    <div class="text-sm text-gray-500">上传资料</div>
+                </div>
+                <div class="bg-green-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-green-600">{{ user.comments.count() }}</div>
+                    <div class="text-sm text-gray-500">发表评论</div>
+                </div>
+                <div class="bg-purple-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-purple-600">{{ total_downloads }}</div>
+                    <div class="text-sm text-gray-500">资料被下载</div>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-yellow-600">{{ total_likes }}</div>
+                    <div class="text-sm text-gray-500">获得收藏</div>
+                </div>
+                <div class="bg-pink-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-pink-600">{{ followers_count }}</div>
+                    <div class="text-sm text-gray-500">被关注数</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户上传的资料 -->
+<div class="max-w-5xl mx-auto">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-6">{{ user.username }}上传的资料</h2>
+
+        <!-- 添加搜索和排序功能 -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <form action="{{ url_for('profile.view_user', user_id=user.id) }}" method="get"
+                class="flex flex-wrap items-center">
+                <div class="flex-grow mr-4 mb-2 md:mb-0">
+                    <input type="text" name="query" placeholder="搜索该用户的资料或课程..." value="{{ query }}"
+                        class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mr-4">
+                    <select name="sort_by" class="border rounded-lg px-4 py-2" onchange="this.form.submit()">
+                        <option value="最新上传" {% if sort_by=='最新上传' %}selected{% endif %}>最新上传</option>
+                        <option value="最多下载" {% if sort_by=='最多下载' %}selected{% endif %}>最多下载</option>
+                        <option value="按标题" {% if sort_by=='按标题' %}selected{% endif %}>按标题</option>
+                    </select>
+                </div>
+                <button type="submit" class="pku-red hover-pku-red text-white px-4 py-2 rounded-lg">搜索</button>
+                {% if query or sort_by != '最新上传' %}
+                <a href="{{ url_for('profile.view_user', user_id=user.id) }}"
+                    class="ml-2 text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i> 清除筛选
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if uploads %}
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            资料名称
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            所属课程
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            类型
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            上传时间
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            下载量
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            操作
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for material in uploads %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                {% if material.file_extension == '.pdf' %}
+                                <i class="far fa-file-pdf text-red-500 mr-3"></i>
+                                {% elif material.file_extension in ['.doc', '.docx'] %}
+                                <i class="far fa-file-word text-blue-500 mr-3"></i>
+                                {% elif material.file_extension in ['.ppt', '.pptx'] %}
+                                <i class="far fa-file-powerpoint text-orange-500 mr-3"></i>
+                                {% elif material.file_extension in ['.xls', '.xlsx'] %}
+                                <i class="far fa-file-excel text-green-500 mr-3"></i>
+                                {% elif material.file_extension in ['.zip', '.rar', '.7z'] %}
+                                <i class="far fa-file-archive text-purple-500 mr-3"></i>
+                                {% else %}
+                                <i class="far fa-file text-gray-500 mr-3"></i>
+                                {% endif %}
+                                {{ material.title }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ material.course.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                {% if material.file_type == '试卷' %}bg-blue-100 text-blue-800
+                                {% elif material.file_type == '笔记' %}bg-green-100 text-green-800
+                                {% elif material.file_type == '课件' %}bg-purple-100 text-purple-800
+                                {% elif material.file_type == '汇编' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ material.file_type }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ material.created_at.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ material.stats.download_count }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                                class="text-blue-600 hover:text-blue-900 mr-3">预览</a>
+                            {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('material.download', material_id=material.id) }}"
+                                class="text-green-600 hover:text-green-900">下载</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            {% if query %}
+            <div class="text-gray-400 mb-4"><i class="fas fa-search text-6xl"></i></div>
+            <h3 class="text-xl font-semibold mb-2">未找到匹配的资料</h3>
+            <p class="text-gray-500 mb-4">没有找到符合"{{ query }}"的资料或课程</p>
+            <a href="{{ url_for('profile.view_user', user_id=user.id) }}" class="text-blue-600 hover:underline">清除搜索</a>
+            {% else %}
+            <div class="text-gray-400 mb-4"><i class="fas fa-folder-open text-6xl"></i></div>
+            <h3 class="text-xl font-semibold mb-2">暂无上传资料</h3>
+            <p class="text-gray-500">该用户尚未上传任何资料</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleFollowUser(userId, username) {
+        const isFollowing = document.getElementById('followUserBtn').innerText.includes('取消关注');
+        const endpoint = isFollowing ? `/unfollow/${userId}` : `/follow/${userId}`;
+
+        // 获取CSRF令牌
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const btn = document.getElementById('followUserBtn');
+                    if (isFollowing) {
+                        // 变为关注按钮
+                        btn.innerHTML = '<i class="fas fa-user-plus mr-1"></i>关注用户';
+                        btn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                        btn.classList.add('pku-red', 'hover-pku-red');
+                    } else {
+                        // 变为取消关注按钮
+                        btn.innerHTML = '<i class="fas fa-user-minus mr-1"></i>取消关注';
+                        btn.classList.remove('pku-red', 'hover-pku-red');
+                        btn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                    }
+                } else {
+                    alert(data.message || '操作失败，请稍后再试');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('请求失败，请稍后重试');
+            });
+    }
+</script>
+{% endblock %}

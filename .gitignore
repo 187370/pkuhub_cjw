@@ -1,0 +1,15 @@
+# 忽略 __pycache__ 目录
+__pycache__/
+blueprints/__pycache__/
+notification/__pycache__/
+database/__pycache__/
+config/__pycache__/
+database/operations/__pycache__/
+utils/__pycache__/
+
+# 忽略日志文件和数据库文件
+output.log
+pkuhub.db
+static/avatars
+static/uploads
+

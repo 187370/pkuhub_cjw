@@ -1,0 +1,930 @@
+{% extends "base.html" %}
+
+{% block title %}{{ material.title }} - 资料详情 - PKUHUB{% endblock %}
+
+{% block head %}
+<!-- 添加KaTeX和marked.js支持 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.5/marked.min.js"></script>
+
+<style>
+    /* 自定义Markdown渲染样式 */
+    .markdown-content h1 {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+
+    .markdown-content h2 {
+        font-size: 1.3rem;
+        font-weight: bold;
+        margin: 0.8rem 0;
+    }
+
+    .markdown-content h3 {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 0.6rem 0;
+    }
+
+    .markdown-content p {
+        margin-bottom: 0.5rem;
+    }
+
+    .markdown-content ul {
+        list-style-type: disc;
+        padding-left: 2rem;
+        margin: 0.5rem 0;
+    }
+
+    .markdown-content ol {
+        list-style-type: decimal;
+        padding-left: 2rem;
+        margin: 0.5rem 0;
+    }
+
+    .markdown-content blockquote {
+        border-left: 3px solid #ddd;
+        padding-left: 1rem;
+        color: #666;
+    }
+
+    .markdown-content pre {
+        background-color: #f5f5f5;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+    }
+
+    .markdown-content code {
+        font-family: monospace;
+        background-color: #f5f5f5;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.2rem;
+    }
+
+    .markdown-content a {
+        color: #3b82f6;
+        text-decoration: underline;
+    }
+
+    .markdown-content img {
+        max-width: 100%;
+    }
+
+    .markdown-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+
+    .markdown-content th,
+    .markdown-content td {
+        border: 1px solid #ddd;
+        padding: 0.3rem;
+    }
+
+    /* 数学公式块的样式 */
+    .math-block {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        margin: 1rem 0;
+        padding: 0.5rem 0;
+    }
+
+    /* 确保KaTeX元素在块内正确显示 */
+    .katex-display {
+        display: block;
+        margin: 1em 0;
+        text-align: center;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    /* 预览区域样式 */
+    #preview-container {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        background-color: #f9fafb;
+        min-height: 6rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 面包屑导航 -->
+<div class="text-sm mb-6">
+    <a href="{{ url_for('browse.index') }}" class="text-blue-600 hover:underline">首页</a> &gt;
+    <a href="{{ url_for('browse.department_view', department_id=material.course.department.id) }}"
+        class="text-blue-600 hover:underline">{{ material.course.department.name }}</a> &gt;
+    <a href="{{ url_for('browse.course_view', course_id=material.course.id) }}" class="text-blue-600 hover:underline">{{
+        material.course.name }}</a> &gt;
+    <span class="text-gray-600">{{ material.title }}</span>
+</div>
+
+<div class="bg-white rounded-lg shadow-lg overflow-hidden">
+    <!-- 资料标题与基本信息 -->
+    <div class="p-6 border-b">
+        <div class="flex justify-between items-start">
+            <div>
+                <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold 
+                {% if material.file_type == '试卷' %}bg-blue-100 text-blue-800
+                {% elif material.file_type == '笔记' %}bg-green-100 text-green-800
+                {% elif material.file_type == '课件' %}bg-purple-100 text-purple-800
+                {% elif material.file_type == '汇编' %}bg-yellow-100 text-yellow-800
+                {% else %}bg-red-100 text-red-800{% endif %} mb-3">
+                    {{ material.file_type }}
+                </span>
+                <h1 class="text-2xl font-bold">{{ material.title }}</h1>
+            </div>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('material.download', material_id=material.id) }}"
+                class="pku-red hover-pku-red text-white px-6 py-2 rounded font-medium flex items-center">
+                <i class="fas fa-download mr-2"></i>
+                下载资料
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="text-blue-600 hover:underline">登录后下载</a>
+            {% endif %}
+        </div>
+
+        <div class="flex items-center mb-4 mt-4">
+            <img src="{{ url_for('static', filename='avatars/' + material.uploader.avatar) }}"
+                alt="{{ material.uploader.username }}" class="w-8 h-8 rounded-full mr-2">
+            <div class="text-gray-600">
+                <a href="{{ url_for('profile.view_user', user_id=material.uploader.id) }}" class="hover:underline">
+                    {{ material.uploader.username }}
+                </a>
+                {% if current_user.is_authenticated and current_user.id != material.uploader.id %}
+                <button id="followAuthorBtn"
+                    onclick="toggleFollowAuthor({{ material.uploader.id }}, '{{ material.uploader.username }}')"
+                    class="ml-2 text-xs px-2 py-1 rounded {% if is_following %}bg-gray-500 hover:bg-gray-600{% else %}pku-red hover-pku-red{% endif %} text-white">
+                    {% if is_following %}
+                    <i class="fas fa-user-minus mr-1"></i>取消关注
+                    {% else %}
+                    <i class="fas fa-user-plus mr-1"></i>关注作者
+                    {% endif %}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+                <p class="text-gray-700"><span class="font-medium">课程:</span> {{ material.course.name }}</p>
+                <p class="text-gray-700"><span class="font-medium">学期:</span> {{ material.semester }}</p>
+                <p class="text-gray-700"><span class="font-medium">上传者:</span> {{ material.uploader.username }}
+                </p>
+            </div>
+            <div>
+                <p class="text-gray-700"><span class="font-medium">上传时间:</span> {{
+                    material.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <div class="flex items-center space-x-4">
+                    <p class="text-gray-700"><span class="font-medium">下载次数:</span> {{ material.stats.download_count }}
+                    </p>
+                    <p class="text-gray-700"><span class="font-medium">浏览次数:</span> {{ material.stats.view_count }}</p>
+                </div>
+                <p class="text-gray-700"><span class="font-medium">文件类型:</span> {{
+                    material.file_path.split('.')[-1].upper() if '.' in material.file_path else '未知' }}</p>
+            </div>
+        </div>
+
+        <!-- 添加点赞按钮 -->
+        <div class="mt-4">
+            {% if current_user.is_authenticated %}
+            <button id="like-button"
+                class="flex items-center space-x-1 px-3 py-1 border rounded-full text-sm hover:bg-gray-100 transition-colors {{ 'text-red-500 border-red-300 bg-red-50' if is_liked else 'text-gray-700 border-gray-300' }}">
+                <i class="fas fa-star {{ 'text-red-500' if is_liked else '' }}"></i>
+                <span id="like-count">{{ material.stats.like_count }}</span>
+                <span id="like-text">{{ "已收藏" if is_liked else "收藏" }}</span>
+            </button>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}"
+                class="flex items-center space-x-1 px-3 py-1 border rounded-full text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <i class="fas fa-star"></i>
+                <span>{{ material.stats.like_count }}</span>
+                <span>登录后收藏</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 资料描述 -->
+    {% if material.description %}
+    <div class="p-6 bg-gray-50">
+        <h2 class="text-lg font-semibold mb-3">资料描述</h2>
+        <p class="text-gray-700 whitespace-pre-wrap">{{ material.description }}</p>
+    </div>
+    {% endif %}
+
+    {% if material.file_path.endswith('.pdf') %}
+    <!-- PDF预览区域 -->
+    <div class="p-6 border-t">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-semibold">预览</h2>
+            <button id="fullscreen-btn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded flex items-center">
+                <i class="fas fa-expand mr-2"></i>全屏查看
+            </button>
+        </div>
+        <div id="pdf-container" class="bg-gray-100 border p-4 rounded text-center relative">
+            <iframe id="pdf-iframe" src="/static/uploads/{{ material.file_path }}" class="w-full h-96"></iframe>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 评论区域 -->
+    <div class="p-6 border-t">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">评论与反馈 (<span id="comment-count">{{ comments|length }}</span>)</h2>
+            <!-- 添加排序选择器 -->
+            <div class="flex items-center">
+                <label for="comment-sort" class="text-sm text-gray-600 mr-2">排序方式:</label>
+                <select id="comment-sort" class="text-sm border rounded px-2 py-1 bg-white">
+                    <option value="newest_first" selected>最新在前</option>
+                    <option value="oldest_first">最早在前</option>
+                </select>
+            </div>
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <div class="mb-8">
+            <form id="comment-form" method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-4">
+                    <label for="content" class="block text-gray-700 text-sm font-bold mb-2">发表评论</label>
+                    {{ form.content(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                    leading-tight focus:outline-none focus:shadow-outline h-24",
+                    placeholder="分享你对这份资料的看法...\n支持Markdown语法和LaTeX公式，例如
+                    $E=mc^2$、**粗体**、*斜体*、[链接](https://example.com)等")
+                    }}
+                    {% if form.content.errors %}
+                    <div class="text-red-500 text-xs italic mt-1"></div>
+                    {% for error in form.content.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="text-xs text-gray-500 mt-1 mb-2">
+                    支持 Markdown 语法和 LaTeX 公式。用 $...$ 表示行内公式，$$...$$表示块级公式。
+                </div>
+        </div>
+
+        <!-- 预览区域 -->
+        <div class="mb-4">
+            <div class="flex justify-between items-center mb-2">
+                <label class="block text-gray-700 text-sm font-bold">预览</label>
+                <div class="text-xs text-gray-500">实时渲染</div>
+            </div>
+            <div id="preview-container" class="markdown-content overflow-auto"></div>
+        </div>
+
+        {{ form.submit(class="pku-red hover-pku-red text-white font-medium py-2 px-4 rounded",
+        id="submit-comment") }}
+        </form>
+    </div>
+    {% else %}
+    <div class="mb-8 bg-blue-50 p-4 rounded">
+        <p class="text-blue-700">请 <a href="{{ url_for('auth.login') }}" class="underline font-medium">登录</a>
+            后发表评论</p>
+    </div>
+    {% endif %}
+
+    <!-- 评论列表 -->
+    <div id="comments-container" class="space-y-6">
+        {% if comments %}
+        {% for comment in comments %}
+        <div class="bg-gray-50 p-4 rounded" id="comment-{{ comment.id }}">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center">
+                    <img src="{{ url_for('static', filename='avatars/' + comment.author.avatar) }}"
+                        alt="{{ comment.author.username }}"
+                        class="w-8 h-8 rounded-full mr-2 object-cover border border-gray-200">
+                    <span class="font-medium">{{ comment.author.username }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 mr-2">{{ comment.created_at.strftime('%Y-%m-%d %H:%M')
+                        }}</span>
+                    {% if current_user.is_authenticated and (current_user.id == comment.user_id or
+                    current_user.is_admin) %}
+                    <button class="text-xs text-red-500 hover:text-red-700 delete-comment-btn"
+                        data-id="{{ comment.id }}" data-material-id="{{ comment.material_id }}">
+                        <i class="fas fa-trash-alt"></i> 删除
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-gray-700 markdown-content raw-content">{{ comment.content }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div id="no-comments-message" class="text-center text-gray-500 py-8">
+            <p>暂无评论，来发表第一条评论吧！</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 推荐资料 -->
+<div class="mt-10">
+    <h2 class="text-xl font-bold mb-6"></h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+    <!-- 该课程下的其他资料 -->
+    {% for related_material in material.course.materials[:4] %}
+    {% if related_material.id != material.id %}
+    <div class="bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+        <div class="p-4">
+            <span class="inline-block px-2 py-1 text-xs rounded 
+                        {% if related_material.file_type == '试卷' %}bg-blue-100 text-blue-800
+                        {% elif related_material.file_type == '笔记' %}bg-green-100 text-green-800
+                        {% elif related_material.file_type == '课件' %}bg-purple-100 text-purple-800
+                        {% else %}bg-red-100 text-red-800{% endif %} mb-2">
+                {{ related_material.file_type }}
+            </span>
+            <h3 class="font-semibold mb-2 text-gray-800">{{ related_material.title }}</h3>
+            <p class="text-sm text-gray-600 mb-3">{{ related_material.semester }}</p>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center text-xs text-gray-500">
+                    <span><i class="fas fa-download mr-1"></i>{{ related_material.download_count }}</span>
+                </div>
+                <a href="{{ url_for('material.material_view', material_id=related_material.id) }}"
+                    class="text-sm text-blue-600 hover:underline">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/markdown_latex.js') }}"></script>
+
+<script>
+    // 声明全局变量，用于跟踪重复请求
+    let isRefreshing = false;
+    // 记录最后一条评论的ID，用于检测新评论
+    let lastKnownCommentId = 0;
+    // 检查新评论的间隔时间（秒）
+    const CHECK_INTERVAL = 10;
+    // 当前排序方式
+    let currentSortOrder = 'newest_first';
+    // 获取CSRF令牌，定义为全局变量以便所有函数访问
+    const globalCsrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const pdfIframe = document.getElementById('pdf-iframe');
+        const pdfContainer = document.getElementById('pdf-container');
+
+        // 只有在PDF预览元素存在的情况下才设置全屏功能
+        if (fullscreenBtn && pdfIframe && pdfContainer) {
+            // 全屏按钮点击事件
+            fullscreenBtn.addEventListener('click', function () {
+                if (!document.fullscreenElement) {
+                    // 进入全屏模式
+                    if (pdfIframe.requestFullscreen) {
+                        pdfIframe.requestFullscreen();
+                    } else if (pdfIframe.webkitRequestFullscreen) {
+                        pdfIframe.webkitRequestFullscreen();
+                    } else if (pdfIframe.msRequestFullscreen) {
+                        pdfIframe.msRequestFullscreen();
+                    }
+                    fullscreenBtn.innerHTML = '<i class="fas fa-compress mr-2"></i>退出全屏';
+                } else {
+                    // 退出全屏模式
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand mr-2"></i>全屏查看';
+                }
+            });
+
+            // 监听全屏状态变化
+            document.addEventListener('fullscreenchange', updateFullscreenButton);
+            document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+            document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+
+            function updateFullscreenButton() {
+                if (document.fullscreenElement) {
+                    fullscreenBtn.innerHTML = '<i class="fas fa-compress mr-2"></i>退出全屏';
+                } else {
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand mr-2"></i>全屏查看';
+                }
+            }
+        }
+
+        // 评论相关功能
+        const commentForm = document.getElementById('comment-form');
+        const commentsContainer = document.getElementById('comments-container');
+        const commentCount = document.getElementById('comment-count');
+        const contentTextarea = document.getElementById('content');
+        const previewContainer = document.getElementById('preview-container');
+        const commentSort = document.getElementById('comment-sort');
+
+        // 实时预览功能优化
+        if (contentTextarea && previewContainer) {
+            // 使用输入防抖技术减少高频率渲染
+            let previewTimer;
+
+            contentTextarea.addEventListener('input', function () {
+                const text = this.value;
+
+                // 立即更新Markdown内容，提高响应速度
+                previewContainer.innerHTML = renderMarkdown(text);
+
+                // 但对MathJax渲染使用防抖处理
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(() => {
+                    renderMathInElementCustom(previewContainer);
+                }, 500); // 输入停止500ms后再渲染数学公式
+            });
+        }
+
+        // 添加排序选择器的事件监听
+        if (commentSort) {
+            commentSort.addEventListener('change', function () {
+                currentSortOrder = this.value;
+                // 更改排序方式后刷新评论
+                refreshComments();
+            });
+        }
+
+        // 确保所有需要的元素都存在
+        if (commentsContainer && commentCount) {
+            // 添加评论提交事件监听
+            if (commentForm && globalCsrfToken) {
+                commentForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    console.log('评论表单提交');
+
+                    const formData = new FormData(commentForm);
+
+                    fetch('{{ url_for("material.material_view", material_id=material.id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': globalCsrfToken
+                        },
+                        body: formData
+                    })
+                        .then(response => {
+                            console.log('评论提交响应状态:', response.status);
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('评论提交响应数据:', data);
+                            if (data.success) {
+                                // 清空评论输入框和预览区域
+                                document.getElementById('content').value = '';
+                                if (previewContainer) {
+                                    previewContainer.innerHTML = '';
+                                }
+
+                                // 添加评论后立即刷新评论区
+                                console.log('提交评论后调用refreshComments()');
+                                refreshComments();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('评论提交错误:', error);
+                            alert('评论提交失败，请稍后重试');
+                        });
+                });
+            }
+
+            // 初始化删除评论按钮事件
+            console.log('初始化评论删除按钮');
+            initDeleteButtons();
+
+            // 页面加载后立即刷新评论
+            console.log('页面加载完成，首次刷新评论');
+            refreshComments();
+
+            // 替换15秒定时完整刷新为检查新评论
+            console.log('设置定时检查新评论');
+            const checkInterval = setInterval(checkForNewComments, CHECK_INTERVAL * 1000);
+
+            // 检查是否有新评论的函数
+            function checkForNewComments() {
+                const timestamp = new Date().getTime();
+                fetch(`/material/{{ material.id }}/check_new_comments?t=${timestamp}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 如果发现有新评论，才触发完整刷新
+                            if (data.last_comment_id > lastKnownCommentId && lastKnownCommentId !== 0) {
+                                console.log(`检测到新评论 ID: ${data.last_comment_id} > ${lastKnownCommentId}`);
+                                refreshComments();
+                            } else {
+                                console.log('无新评论');
+                            }
+                            // 更新最后已知评论ID
+                            lastKnownCommentId = Math.max(lastKnownCommentId, data.last_comment_id);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('检查新评论错误:', error);
+                    });
+            }
+
+            // 刷新评论函数 - 修改为支持排序选项
+            function refreshComments() {
+                // 防止重复请求
+                if (isRefreshing) {
+                    console.log('正在刷新中，跳过本次请求');
+                    return;
+                }
+
+                isRefreshing = true;
+                console.log('开始刷新评论');
+
+                // 添加时间戳防止浏览器缓存，并添加排序参数
+                const timestamp = new Date().getTime();
+                fetch(`/material/{{ material.id }}/comments?t=${timestamp}&sort=${currentSortOrder}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('刷新评论响应数据:', data);
+                        if (data.success) {
+                            // 更新评论计数
+                            commentCount.textContent = data.count;
+
+                            // 更新最后已知评论ID
+                            if (data.comments.length > 0) {
+                                // 找出所有评论ID中的最大值
+                                lastKnownCommentId = Math.max(...data.comments.map(comment => comment.id));
+                            }
+
+                            // 获取当前页面上的评论ID列表
+                            const existingCommentIds = Array.from(
+                                document.querySelectorAll('[id^="comment-"]')
+                            ).map(el => {
+                                // 确保解析为数字,避免NaN
+                                const idStr = el.id.replace('comment-', '');
+                                return parseInt(idStr) || 0; // 如果不是数字，返回0
+                            }).filter(id => id > 0); // 只保留有效ID
+
+                            console.log('现有评论IDs:', existingCommentIds);
+                            console.log('服务器评论数据:', data.comments);
+
+                            // 检查服务器上是否有评论已被删除
+                            const serverCommentIds = data.comments.map(comment => comment.id);
+                            existingCommentIds.forEach(id => {
+                                if (!serverCommentIds.includes(id)) {
+                                    console.log('删除不存在的评论:', id);
+                                    const commentElement = document.getElementById(`comment-${id}`);
+                                    if (commentElement) commentElement.remove();
+                                }
+                            });
+
+                            // 清空评论容器，完全重新渲染所有评论
+                            if (data.count > 0) {
+                                // 移除"暂无评论"提示(如果有)
+                                const noCommentsMsg = document.getElementById('no-comments-message');
+                                if (noCommentsMsg) {
+                                    noCommentsMsg.remove();
+                                }
+
+                                // 清空现有评论并重新渲染
+                                commentsContainer.innerHTML = '';
+
+                                // 按后端返回的顺序添加评论
+                                data.comments.forEach(comment => {
+                                    addCommentToDOM(comment);
+                                });
+                            } else {
+                                // 如果没有评论，显示"暂无评论"提示
+                                commentsContainer.innerHTML = `
+                                    <div id="no-comments-message" class="text-center text-gray-500 py-8">
+                                        <p>暂无评论，来发表第一条评论吧！</p>
+                                    </div>
+                                `;
+                            }
+
+                            // 渲染所有评论中的公式
+                            if (window.MathJax && window.MathJax.typesetPromise) {
+                                window.MathJax.typesetPromise().catch(function (err) {
+                                    console.error('MathJax全局渲染错误:', err);
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('刷新评论错误:', error);
+                    })
+                    .finally(() => {
+                        isRefreshing = false;
+                        console.log('评论刷新完成');
+                    });
+            }
+        }
+
+        // 添加评论到DOM
+        function addCommentToDOM(comment) {
+            if (!commentsContainer) return;
+
+            const commentElement = document.createElement('div');
+            commentElement.className = 'bg-gray-50 p-4 rounded';
+            commentElement.id = `comment-${comment.id}`;
+
+            commentElement.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='avatars/') }}${comment.user.avatar}"
+                            alt="${comment.user.username}"
+                            class="w-8 h-8 rounded-full mr-2 object-cover border border-gray-200">
+                        <span class="font-medium">${comment.user.username}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-xs text-gray-500 mr-2">${comment.created_at}</span>
+                        ${comment.can_delete ? `
+                        <button class="text-xs text-red-500 hover:text-red-700 delete-comment-btn" data-id="${comment.id}">
+                            <i class="fas fa-trash-alt"></i> 删除
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="text-gray-700 markdown-content">${renderMarkdown(comment.content)}</div>
+            `;
+
+            // 将评论添加到容器中（按后端排序，新评论在前）
+            commentsContainer.appendChild(commentElement);
+
+            // 渲染新添加的评论中的Markdown和LaTeX
+            const commentContentDiv = commentElement.querySelector('.markdown-content');
+            commentContentDiv.innerHTML = renderMarkdown(comment.content);
+
+            // 使用MathJax渲染新添加的评论中的公式
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise([commentContentDiv])
+                    .catch(err => console.error('新评论MathJax渲染错误:', err));
+            }
+        }
+
+        // 初始化删除按钮事件
+        function initDeleteButtons() {
+            console.log('初始化删除按钮事件');
+
+            document.querySelectorAll('.delete-comment-btn').forEach(button => {
+                // 避免重复添加事件
+                if (!button.hasAttribute('data-handler-attached')) {
+                    button.setAttribute('data-handler-attached', 'true');
+
+                    button.addEventListener('click', function () {
+                        const commentId = this.getAttribute('data-id');
+                        if (commentId) {
+                            deleteComment(commentId);
+                        }
+                    });
+                }
+            });
+        }
+
+        // 确保页面加载完成后初始化删除按钮
+        initDeleteButtons();
+
+        // 处理点赞功能
+        const likeButton = document.getElementById('like-button');
+        if (likeButton && globalCsrfToken) {
+            const likeCount = document.getElementById('like-count');
+            const likeText = document.getElementById('like-text');
+
+            likeButton.addEventListener('click', function () {
+                fetch('{{ url_for("material.toggle_like", material_id=material.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': globalCsrfToken,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 更新点赞状态
+                            likeCount.textContent = data.like_count;
+
+                            if (data.is_liked) {
+                                likeButton.classList.add('text-red-500', 'border-red-300', 'bg-red-50');
+                                likeButton.classList.remove('text-gray-700', 'border-gray-300');
+                                likeButton.querySelector('i').classList.add('text-red-500');
+                                likeText.textContent = '已收藏';
+                            } else {
+                                likeButton.classList.remove('text-red-500', 'border-red-300', 'bg-red-50');
+                                likeButton.classList.add('text-gray-700', 'border-gray-300');
+                                likeButton.querySelector('i').classList.remove('text-red-500');
+                                likeText.textContent = '收藏';
+                            }
+                        } else {
+                            alert(data.message || '操作失败，请稍后再试');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('请求失败，请稍后重试');
+                    });
+            });
+        }
+
+        // 初始化Markdown和LaTeX渲染器
+        initMarkdownLatexRenderer();
+
+        // 在页面加载时渲染所有评论中的Markdown和LaTeX
+        renderAllMarkdownContent();
+
+        // 页面加载完成后，确保已有评论中的公式能被正确渲染
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            window.MathJax.typesetPromise().catch(function (err) {
+                console.error('页面加载后MathJax渲染错误:', err);
+            });
+        }
+
+        // 页面加载时统一处理所有评论中的Markdown和LaTeX，确保一致渲染
+        function renderAllInitialComments() {
+            document.querySelectorAll('.raw-content').forEach(element => {
+                const rawContent = element.textContent; // 获取原始文本内容
+                element.innerHTML = renderMarkdown(rawContent);
+                element.classList.remove('raw-content'); // 移除标记类，避免重复处理
+            });
+
+            // 使用MathJax渲染页面上所有公式
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise().catch(function (err) {
+                    console.error('初始评论MathJax渲染错误:', err);
+                });
+            }
+        }
+
+        // 初始渲染所有已加载的评论
+        renderAllInitialComments();
+    });
+
+    // 添加关注作者功能
+    function toggleFollowAuthor(userId, username) {
+        const followAuthorBtn = document.getElementById('followAuthorBtn');
+        if (!followAuthorBtn) return;
+
+        const isFollowing = followAuthorBtn.innerText.includes('取消关注');
+        const endpoint = isFollowing ? `/unfollow/${userId}` : `/follow/${userId}`;
+
+        if (!globalCsrfToken) {
+            console.error('无法获取CSRF令牌');
+            return;
+        }
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': globalCsrfToken
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (isFollowing) {
+                        // 变为关注按钮
+                        followAuthorBtn.innerHTML = '<i class="fas fa-user-plus mr-1"></i>关注作者';
+                        followAuthorBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                        followAuthorBtn.classList.add('pku-red', 'hover-pku-red');
+                    } else {
+                        // 变为取消关注按钮
+                        followAuthorBtn.innerHTML = '<i class="fas fa-user-minus mr-1"></i>取消关注';
+                        followAuthorBtn.classList.remove('pku-red', 'hover-pku-red');
+                        followAuthorBtn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                    }
+                } else {
+                    alert(data.message || '操作失败，请稍后再试');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('请求失败，请稍后重试');
+            });
+    }
+
+    function deleteComment(commentId) {
+        console.log('deleteComment函数被调用，commentId:', commentId);
+
+        if (!confirm('确定要删除这条评论吗？此操作不可撤销。')) {
+            console.log('用户取消删除');
+            return;
+        }
+
+        // 检查CSRF令牌
+        if (!globalCsrfToken) {
+            console.error('无法获取CSRF令牌，value:', globalCsrfToken);
+            alert('系统错误：无法获取安全令牌');
+            return;
+        }
+
+        console.log('开始发送删除请求, URL:', `/comment/${commentId}/delete`);
+        console.log('使用的CSRF令牌:', globalCsrfToken);
+
+        // 发送删除请求
+        fetch(`/comment/${commentId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': globalCsrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                console.log('收到服务器响应，状态:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('解析响应JSON成功:', data);
+                if (data.success) {
+                    console.log('删除评论成功');
+
+                    // 更新评论计数
+                    const commentCount = document.getElementById('comment-count');
+                    if (commentCount) {
+                        const currentCount = parseInt(commentCount.textContent) || 0;
+                        commentCount.textContent = Math.max(0, currentCount - 1);
+                    }
+
+                    // 直接从DOM中删除评论元素
+                    const commentElement = document.getElementById(`comment-${commentId}`);
+                    if (commentElement) {
+                        commentElement.remove();
+                        checkEmptyComments();
+                    }
+
+                    // 可选：显示成功消息
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+                    successMessage.innerHTML = '<span class="font-bold">成功：</span> 评论已删除';
+                    document.body.appendChild(successMessage);
+
+                    // 3秒后移除成功消息
+                    setTimeout(() => {
+                        successMessage.remove();
+                    }, 3000);
+                } else {
+                    console.error('服务器返回删除失败:', data.message);
+                    alert(data.message || '删除评论失败');
+                }
+            })
+            .catch(error => {
+                console.error('删除评论请求出错:', error);
+
+                // 尽管请求处理失败，但可能评论已经被删除，我们检查一下
+                const commentElement = document.getElementById(`comment-${commentId}`);
+
+                // 如果评论仍然存在，显示错误信息
+                if (commentElement) {
+                    alert('评论删除请求处理失败，请稍后再试或刷新页面查看最新状态');
+                } else {
+                    console.log('尽管出现错误，但评论元素已不存在，可能已成功删除');
+                }
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('页面加载完成，初始化事件');
+
+        // 全局事件委托，处理评论删除按钮点击事件
+        document.addEventListener('click', function (event) {
+            // 查找最近的删除按钮祖先元素
+            const deleteButton = event.target.closest('.delete-comment-btn');
+
+            if (deleteButton) {
+                event.preventDefault();
+                const commentId = deleteButton.getAttribute('data-id');
+                console.log('检测到删除按钮点击，评论ID:', commentId);
+
+                if (commentId) {
+                    deleteComment(commentId);
+                } else {
+                    console.error('删除按钮没有data-id属性');
+                }
+            }
+        });
+    });
+
+    // 检查是否没有评论了
+    function checkEmptyComments() {
+        const commentContainer = document.getElementById('comments-container');
+        if (commentContainer && commentContainer.querySelectorAll('[id^="comment-"]').length === 0) {
+            console.log('创建"暂无评论"提示');
+            commentContainer.innerHTML = `
+                <div id="no-comments-message" class="text-center text-gray-500 py-8">
+                    <p>暂无评论，来发表第一条评论吧！</p>
+            `;
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.name }} - PKUHUB{% endblock %}
+
+{% block content %}
+<!-- 面包屑导航 -->
+<div class="text-sm mb-6">
+    <a href="{{ url_for('browse.index') }}" class="text-blue-600 hover:underline">首页</a> &gt;
+    <a href="{{ url_for('browse.department_view', department_id=course.department_id) }}"
+        class="text-blue-600 hover:underline">{{ course.department.name }}</a> &gt;
+    <span class="text-gray-600">{{ course.name }}</span>
+</div>
+
+<!-- 课程信息 -->
+<div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+    <div class="p-6">
+        <h1 class="text-2xl font-bold mb-2">{{ course.name }}</h1>
+        <p class="text-gray-600">{{ course.department.name }}</p>
+        <div class="flex items-center space-x-4 mt-4">
+            <div class="bg-blue-50 px-4 py-2 rounded-lg">
+                <p class="text-blue-800 font-medium text-sm">资料总数: {{ materials|length if materials else 0 }}
+                </p>
+            </div>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('material.upload') }}"
+                class="bg-green-50 px-4 py-2 rounded-lg text-green-800 font-medium text-sm flex items-center">
+                <i class="fas fa-plus mr-2"></i>上传{{ course.name }}资料
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login', next=request.path) }}"
+                class="bg-green-50 px-4 py-2 rounded-lg text-green-800 font-medium text-sm flex items-center">
+                <i class="fas fa-sign-in-alt mr-2"></i>登录后上传资料
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 资料筛选与排序 -->
+<div class="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-center">
+    <form id="filter-form" action="{{ url_for('browse.course_view', course_id=course.id) }}" method="get"
+        class="w-full flex flex-wrap items-center">
+        <div class="mr-6 mb-2">
+            <label class="text-sm font-medium text-gray-700 mr-2">类型:</label>
+            <select name="file_type" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm">
+                {% for type in file_types %}
+                <option value="{{ type }}" {% if current_file_type==type %}selected{% endif %}>{{ type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mr-6 mb-2">
+            <label class="text-sm font-medium text-gray-700 mr-2">学期:</label>
+            <select name="semester" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm">
+                {% for sem in semesters %}
+                <option value="{{ sem }}" {% if current_semester==sem %}selected{% endif %}>{{ sem }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-sm font-medium text-gray-700 mr-2">排序:</label>
+            <select name="sort_by" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm">
+                <option value="最新上传" {% if current_sort=='最新上传' %}selected{% endif %}>最新上传</option>
+                <option value="最多下载" {% if current_sort=='最多下载' %}selected{% endif %}>最多下载</option>
+                <option value="最多评论" {% if current_sort=='最多评论' %}selected{% endif %}>最多评论</option>
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- 资料列表 -->
+{% if materials %}
+<div class="overflow-hidden bg-white shadow rounded-lg">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    资料名称
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    类型
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    学期
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    上传者
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    下载量
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for material in materials %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <i class="
+                        {% if material.file_extension == '.pdf' %}far fa-file-pdf text-red-500
+                        {% elif material.file_extension in ['.doc', '.docx'] %}far fa-file-word text-blue-500
+                        {% elif material.file_extension in ['.ppt', '.pptx'] %}far fa-file-powerpoint text-orange-500
+                        {% elif material.file_extension in ['.xls', '.xlsx'] %}far fa-file-excel text-green-500
+                        {% else %}far fa-file text-gray-500{% endif %} mr-3"></i>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">
+                                <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                                    class="hover:text-blue-600">{{ material.title }}</a>
+                            </div>
+                            <div class="text-xs text-gray-500">上传于 {{ material.created_at.strftime('%Y-%m-%d')
+                                }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        {% if material.file_type == '试卷' %}bg-blue-100 text-blue-800
+                        {% elif material.file_type == '笔记' %}bg-green-100 text-green-800
+                        {% elif material.file_type == '课件' %}bg-purple-100 text-purple-800
+                        {% elif material.file_type == '汇编' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ material.file_type }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ material.semester }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='avatars/' + material.uploader.avatar) }}"
+                            alt="{{ material.uploader.username }}"
+                            class="w-6 h-6 rounded-full mr-2 object-cover border border-gray-200">
+                        <span class="text-sm text-gray-900">{{ material.uploader.username }}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ material.stats.download_count }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                        class="text-blue-600 hover:text-blue-900 mr-3">预览</a>
+                    <a href="{{ url_for('material.download', material_id=material.id) }}"
+                        class="text-green-600 hover:text-green-900">下载</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-12 bg-white rounded-lg shadow">
+    <i class="fas fa-folder-open text-gray-300 text-5xl mb-4"></i>
+    <p class="text-lg text-gray-500 mb-6">该课程暂无资料</p>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('material.upload') }}"
+        class="pku-red hover-pku-red text-white px-6 py-3 rounded-lg inline-flex items-center">
+        <i class="fas fa-upload mr-2"></i>上传第一份资料
+    </a>
+    {% else %}
+    <a href="{{ url_for('auth.login') }}" class="text-blue-600 hover:underline">登录</a>
+    <span class="text-gray-500">后上传资料</span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 页面加载完成后自动检查当前是否有过滤条件
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileType = urlParams.get('file_type');
+        const semester = urlParams.get('semester');
+        const sortBy = urlParams.get('sort_by');
+
+        // 如果有过滤条件，显示一个清除过滤的按钮
+        if (fileType || semester || sortBy) {
+            const filterForm = document.getElementById('filter-form');
+            const clearButton = document.createElement('button');
+            clearButton.type = 'button';
+            clearButton.className = 'ml-4 text-xs text-red-600 hover:text-red-800';
+            clearButton.innerHTML = '清除过滤 <i class="fas fa-times"></i>';
+            clearButton.onclick = function () {
+                window.location.href = "{{ url_for('browse.course_view', course_id=course.id) }}";
+            };
+            filterForm.appendChild(clearButton);
+        }
+    });
+</script>
+{% endblock %}

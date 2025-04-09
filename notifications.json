@@ -1,0 +1,47 @@
+[
+  {
+    "id": "1742560679.456255",
+    "title": "关注的用户上传了新资料",
+    "content": "您关注的用户 abc 上传了新资料《qwd》，点击查看详情。\n\n资料类型：试卷\n课程：数论专题II\n上传时间：2025-03-21 20:37",
+    "target_role": "followers",
+    "created_at": "2025-03-21 20:37:59",
+    "created_by": 1,
+    "material_id": 5,
+    "for_users": [
+      2
+    ],
+    "read_by": [
+      2
+    ]
+  },
+  {
+    "id": "1742561857.478343",
+    "title": "关注的用户上传了新资料",
+    "content": "您关注的用户 abc 上传了新资料《rsdGv》，点击查看详情。\n\n资料类型：试卷\n课程：DSv\n上传时间：2025-03-21 20:57",
+    "target_role": "followers",
+    "created_at": "2025-03-21 20:57:37",
+    "created_by": 1,
+    "material_id": 6,
+    "for_users": [
+      2
+    ],
+    "read_by": [
+      2
+    ]
+  },
+  {
+    "id": "1742652081.711651",
+    "title": "关注的用户上传了新资料",
+    "content": "您关注的用户 你爸 上传了新资料《..2》，点击查看详情。\n\n资料类型：试卷\n课程：组合数学\n上传时间：2025-03-22 14:01",
+    "target_role": "followers",
+    "created_at": "2025-03-22 14:01:21",
+    "created_by": 2,
+    "material_id": 6,
+    "for_users": [
+      1
+    ],
+    "read_by": [
+      1
+    ]
+  }
+]

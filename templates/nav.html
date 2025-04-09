@@ -1,0 +1,116 @@
+<nav class="pku-red text-white py-3 sticky top-0 z-50">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+        <!-- 添加北大校徽 - 修改为使用url_for函数 -->
+        <div class="flex items-center space-x-2">
+            <img src="{{ url_for('static', filename='avatars/pkuhub-8人.jpg') }}" alt="PKUhub会徽" class="h-10">
+            <a href="{{ url_for('browse.index') }}" class="text-xl font-bold">PKUHUB</a>
+        </div>
+
+        <div class="hidden md:flex space-x-6">
+            <!-- 更新其他导航链接 -->
+            <a href="{{ url_for('browse.index') }}" class="hover:text-gray-300">首页</a>
+            <a href="{{ url_for('search.search') }}" class="hover:text-gray-300">搜索</a>
+            <a href="{{ url_for('material.upload') }}" class="hover:text-gray-300">上传资料</a>
+            <!-- 临时使用硬编码URL避免构建错误 -->
+            <a href="/ranking/" class="hover:text-gray-300">用户排行榜</a>
+            <a href="{{ url_for('about.about') }}" class="hover:text-gray-300">关于平台</a>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            {% if current_user.is_authenticated %}
+            <div class="relative">
+                <a href="{{ url_for('notification.view_notifications') }}" class="hover:text-gray-300 relative">
+                    <i class="fas fa-bell"></i>
+                    <span id="notification-badge"
+                        class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+                        style="{% if unread_count == 0 %}display: none;{% endif %}">{{ unread_count }}</span>
+                </a>
+            </div>
+            <div class="relative" id="user-menu">
+                <div class="flex items-center space-x-2 cursor-pointer" id="user-menu-button">
+                    <a href="{{ url_for('profile.profile') }}">
+                        <img src="{{ url_for('static', filename='avatars/' + current_user.avatar) }}" alt="用户头像"
+                            class="h-8 w-8 rounded-full object-cover">
+                    </a>
+                    <span class="hidden md:inline">{{ current_user.username }}</span>
+                    <i class="fas fa-caret-down text-xs"></i>
+                </div>
+                <div id="user-menu-dropdown"
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden">
+                    <a href="{{ url_for('profile.profile') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">
+                        <div class="flex items-center">
+                            <i class="fas fa-user mr-2"></i>
+                            <div>
+                                <div>个人主页</div>
+                                {% if current_user.is_authenticated and current_user.is_remembered %}
+                                <span class="text-xs text-gray-500">自动登录已启用</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin.admin_dashboard') }}"
+                        class="block px-4 py-2 text-gray-800 hover:bg-gray-100">管理后台</a>
+                    {% endif %}
+                    <div class="border-t border-gray-100"></div>
+                    <a href="{{ url_for('auth.logout') }}"
+                        class="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-red-600">
+                        <i class="fas fa-sign-out-alt mr-2"></i>退出登录
+                    </a>
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const menuButton = document.getElementById('user-menu-button');
+                    const menuDropdown = document.getElementById('user-menu-dropdown');
+
+                    menuButton.addEventListener('click', function () {
+                        menuDropdown.classList.toggle('hidden');
+                    });
+
+                    // 点击页面其他地方关闭菜单
+                    document.addEventListener('click', function (event) {
+                        if (!document.getElementById('user-menu').contains(event.target)) {
+                            menuDropdown.classList.add('hidden');
+                        }
+                    });
+                });
+            </script>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="hover:text-gray-300">登录</a>
+            <a href="{{ url_for('auth.register') }}"
+                class="bg-white text-gray-800 px-4 py-1 rounded hover:bg-gray-200">注册</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+{% block scripts %}
+<script>
+    // 定期检查未读通知数量
+    function checkUnreadNotifications() {
+        fetch('/notifications/unread_count')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('notification-badge');
+                if (badge) {
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'flex';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            });
+    }
+
+    // 页面加载完成后检查通知
+    document.addEventListener('DOMContentLoaded', function () {
+        // 立即检查一次
+        checkUnreadNotifications();
+
+        // 每30秒检查一次
+        setInterval(checkUnreadNotifications, 30000);
+    });
+</script>
+{% endblock %}

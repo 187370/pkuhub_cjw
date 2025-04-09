@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}搜索结果: {{ query }} - PKUHUB{% endblock %}
+
+{% block content %}
+<!-- 搜索区域 -->
+<div class="bg-gray-100 py-6 mb-4 -mx-4">
+    <div class="container mx-auto px-4">
+        <form action="{{ url_for('search.search') }}" method="get" class="max-w-2xl mx-auto flex">
+            <input name="q" type="text" value="{{ query }}" placeholder="搜索课程、试卷或笔记..."
+                class="w-full px-4 py-2 rounded-l-lg focus:outline-none">
+            <button type="submit" class="pku-red hover-pku-red text-white px-6 py-2 rounded-r-lg">
+                <i class="fas fa-search mr-2"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- 搜索结果 -->
+<h1 class="text-2xl font-bold mb-6">搜索结果: "{{ query }}"</h1>
+
+{% if materials %}
+<p class="text-gray-600 mb-4">找到 {{ materials|length }} 个匹配结果</p>
+
+<!-- 在资料搜索结果中显示作者头像 -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    资料名称
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    所属课程
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    类型
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    上传时间
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    下载量
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for material in materials %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <i class="far 
+                        {% if material.file_extension == '.pdf' %}fa-file-pdf text-red-500
+                        {% elif material.file_extension in ['.doc', '.docx'] %}fa-file-word text-blue-500
+                        {% elif material.file_extension in ['.ppt', '.pptx'] %}fa-file-powerpoint text-orange-500
+                        {% elif material.file_extension in ['.xls', '.xlsx'] %}fa-file-excel text-green-500
+                        {% else %}fa-file text-gray-500{% endif %} mr-3"></i>
+                        <div>
+                            <div class="flex items-center">
+                                <div class="text-sm font-medium text-gray-900">{{ material.title }}</div>
+                                <img src="{{ url_for('static', filename='avatars/' + material.uploader.avatar) }}"
+                                    alt="{{ material.uploader.username }}"
+                                    class="w-5 h-5 rounded-full ml-2 object-cover border border-gray-200"
+                                    title="{{ material.uploader.username }}">
+                            </div>
+                            <div class="text-xs text-gray-500">{{ material.description|truncate(40) }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ material.course.name }}</div>
+                    <div class="text-xs text-gray-500">{{ material.course.department.name }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        {% if material.file_type == '试卷' %}bg-blue-100 text-blue-800
+                        {% elif material.file_type == '笔记' %}bg-green-100 text-green-800
+                        {% elif material.file_type == '课件' %}bg-purple-100 text-purple-800
+                        {% elif material.file_type == '汇编' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ material.file_type }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ material.created_at.strftime('%Y-%m-%d') }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ material.stats.download_count }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <a href="{{ url_for('material.material_view', material_id=material.id) }}"
+                        class="text-blue-600 hover:text-blue-900 mr-3">查看</a>
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('material.download', material_id=material.id) }}"
+                        class="text-green-600 hover:text-green-900">下载</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center">
+    <i class="fas fa-search text-gray-300 text-5xl mb-4"></i>
+    <h2 class="text-xl text-gray-700 mb-2">未找到相关资料</h2>
+    <p class="text-gray-500 mb-6">很抱歉，未能匹配到"{{ query }}"的搜索结果</p>
+    <div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 justify-center">
+        <a href="{{ url_for('browse.index') }}" class="text-blue-600 hover:underline">返回首页</a>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('material.upload') }}" class="pku-red hover-pku-red text-white px-4 py-2 rounded-md">
+            <i class="fas fa-plus mr-2"></i>上传此资料
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 搜索过滤器 -->
+{% if materials %}
+<div class="bg-white rounded-lg shadow p-6 mt-6">
+    <h2 class="text-lg font-semibold mb-4">筛选结果</h2>
+    <form action="{{ url_for('search.search') }}" method="get" id="filter-form">
+        <!-- 保持搜索词 -->
+        <input type="hidden" name="q" value="{{ query }}">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- 类型筛选 -->
+            <div>
+                <h3 class="text-sm font-medium mb-2">资料类型</h3>
+                <select name="type" class="w-full border rounded p-2 text-sm"
+                    onchange="document.getElementById('filter-form').submit()">
+                    <option value="">全部类型</option>
+                    {% for type_value, type_name in file_types %}
+                    <option value="{{ type_value }}" {% if current_type==type_value %}selected{% endif %}>{{
+                        type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 时间筛选 -->
+            <div>
+                <h3 class="text-sm font-medium mb-2">上传时间</h3>
+                <select name="time" class="w-full border rounded p-2 text-sm"
+                    onchange="document.getElementById('filter-form').submit()">
+                    <option value="">全部时间</option>
+                    <option value="week" {% if current_time=='week' %}selected{% endif %}>一周内</option>
+                    <option value="month" {% if current_time=='month' %}selected{% endif %}>一月内</option>
+                    <option value="year" {% if current_time=='year' %}selected{% endif %}>一年内</option>
+                </select>
+            </div>
+
+            <!-- 排序方式 -->
+            <div>
+                <h3 class="text-sm font-medium mb-2">排序方式</h3>
+                <select name="sort" class="w-full border rounded p-2 text-sm"
+                    onchange="document.getElementById('filter-form').submit()">
+                    <option value="relevance" {% if current_sort=='relevance' %}selected{% endif %}>相关性排序
+                    </option>
+                    <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>上传时间（最新）</option>
+                    <option value="downloads" {% if current_sort=='downloads' %}selected{% endif %}>下载次数（最多）
+                    </option>
+                    <option value="comments" {% if current_sort=='comments' %}selected{% endif %}>评论数量（最多）
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 添加课程类型筛选 -->
+        <div class="mt-4">
+            <h3 class="text-sm font-medium mb-2">课程类型</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="course_type" value="" class="form-radio" {% if not current_course_type
+                        %}checked{% endif %} onchange="document.getElementById('filter-form').submit()">
+                    <span class="ml-2">全部</span>
+                </label>
+                {% for type_value in course_types %}
+                <label class="inline-flex items-center">
+                    <input type="radio" name="course_type" value="{{ type_value }}" class="form-radio" {% if
+                        current_course_type==type_value %}checked{% endif %}
+                        onchange="document.getElementById('filter-form').submit()">
+                    <span class="ml-2">{{ type_value }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <a href="{{ url_for('search.search', q=query) }}"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2">重置筛选</a>
+            <button type="submit" class="pku-red hover-pku-red text-white px-4 py-2 rounded">应用筛选</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 自动提交表单脚本已经通过onchange处理
+    });
+</script>
+{% endblock %}

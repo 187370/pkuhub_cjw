@@ -8,7 +8,7 @@ from .errors import errors_bp
 from .material import material_bp
 from .profile import profile_bp
 from .search import search_bp
-
+from blueprints.utils_bp import utils_bp
 # 创建一个蓝图列表，方便在主应用中注册
 all_blueprints = [
     admin_bp,

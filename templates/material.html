@@ -365,8 +365,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/markdown_latex.js') }}"></script>
-
+<script src="{{ url_for('utils.serve_file', filename='js/markdown_latex.js') }}"></script>
 <script>
     // 声明全局变量，用于跟踪重复请求
     let isRefreshing = false;

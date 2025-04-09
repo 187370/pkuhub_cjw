@@ -59,6 +59,7 @@ def create_app(config_object=Config):
     from blueprints.about import about_bp
     from blueprints.notification import notification_bp  # 添加这一行
     from blueprints.ranking import ranking_bp  # 确保导入排行榜蓝图
+    from blueprints.utils_bp import utils_bp  # 导入其他蓝图
 
     # 将蓝图注册到应用
     app.register_blueprint(auth_bp)
@@ -71,6 +72,7 @@ def create_app(config_object=Config):
     app.register_blueprint(about_bp)
     app.register_blueprint(notification_bp)  # 添加这一行
     app.register_blueprint(ranking_bp)  # 注册排行榜蓝图
+    app.register_blueprint(utils_bp, url_prefix='/utils')  # 注册其他蓝图
 
     # 导入并应用用户关注功能 - 在所有数据库表都创建好之后再初始化
     with app.app_context():
